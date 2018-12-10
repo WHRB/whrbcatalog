@@ -1,0 +1,91 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Add a Record
+{% endblock %}
+
+<!--Configure alerts -->
+{% block head %}
+    <script>
+        $(document).ready(function(){
+
+            // hide alert if shown
+            $(".alert").hide();
+
+            // upon form submission check if all inputs are filled
+            $("form").submit(function(event){
+
+                // if any fields left blank except notes
+                if ($.trim($(this).find('input[name="period"]').val()) == "" || $.trim($(this).find('input[name="composer"]').val()) == "" || $.trim($(this).find('input[name="title"]').val()) == "" || $.trim($(this).find('input[name="artist"]').val()) == "" || $.trim($(this).find('input[name="label"]').val()) == "" || $.trim($(this).find('input[name="number"]').val()) == "" || $.trim($(this).find('input[name="length"]').val()) == ""){
+
+                    // prevent form submission
+                    event.preventDefault();
+
+                    // show warning alert
+                    $("#warning").slideDown();
+
+                // if all fields filled
+                } else {
+
+                    // show success alert
+                    $("#warning").slideUp();
+                    $("#success").slideDown();
+                }
+            });
+        });
+    </script>
+{% endblock %}
+
+{% block main %}
+    <h1>Add a Record</h1>
+    <br>
+
+    <!--success alert-->
+    <div id="success" class="alert alert-success">
+        <a href="#" class="close" data-dismiss="alert" aria-label="close" aria-hidden="true">&times;</a>
+        Record added.
+    </div>
+
+    <!--warning alert-->
+    <div id="warning" class="alert alert-warning">
+        <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+        Must provide all fields.
+    </div>
+
+    <!--form-->
+    <form action="/addrecord" name="addrecord" method="post">
+        <div class="form-group">
+            <div>
+                <input class="form-control" placeholder="Period" name="period" id="period" type="number" min="0" max="6" autofocus>
+            </div>
+        </div>
+        <div class="form-group">
+            <input class="form-control" name="composer" placeholder="Composer" type="text">
+        </div>
+        <div class="form-group">
+            <input class="form-control" name="title" placeholder="Title" type="text">
+        </div>
+        <div class="form-group">
+            <input class="form-control" name="artist" placeholder="Performer(s)" type="text">
+        </div>
+        <div class="form-group">
+            <input class="form-control" name="label" placeholder="Label" type="text">
+        </div>
+        <div class="form-group">
+              <select class="form-control" name="format" id="format">
+                    <option value="CD">CD</option>
+                    <option value="LP">LP</option>
+              </select>
+        </div>
+        <div class="form-group">
+            <input class="form-control" name="number" placeholder="Number" type="text">
+        </div>
+        <div class="form-group">
+            <input class="form-control" name="length" placeholder="Length" type="number" step="0.1" min="0">
+        </div>
+        <div class="form-group">
+            <input class="form-control" name="notes" placeholder="Notes" type="text">
+        </div>
+        <button class="btn btn-primary" name="add" type="submit">Add</button>
+    </form>
+{% endblock %}

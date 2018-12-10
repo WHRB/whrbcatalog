@@ -1,0 +1,50 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Master Chekhov
+{% endblock %}
+
+{% block head %}
+    <script>
+        $(document).ready(function() {
+            $(".alert").hide();
+            $("form").submit(function(event){
+                if ($.trim($(this).find('input[name="query"]').val()) == "") {
+                    event.preventDefault();
+                    $("#searchword").slideDown();
+                }
+            });
+        });
+    </script>
+{% endblock %}
+
+{% block main %}
+    <br>
+    <h1>Master Chekhov</h1>
+    <br>
+    <br>
+
+    <div id="searchword" class="alert alert-danger alert-dismissible">
+        <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+        Please enter a search word!
+    </div>
+
+    <form action="/" method="post">
+        <div class="form-group">
+            <h5 class="d-inline text-muted">Search by:&nbsp;&nbsp;&nbsp;</h5>
+            <select class="form-control form-control-lg" name="searchtype">
+                <option>Everything</option>
+                <option>Period</option>
+                <option>Composer</option>
+                <option>Title</option>
+                <option>Artist</option>
+                <option>Label</option>
+                <option>Length</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <input autocomplete="off" autofocus class="form-control form-control-lg" name="query" placeholder="Enter keywords" type="text">
+        </div>
+        <button class="btn btn-primary" type="submit">Search</button>
+    </form>
+{% endblock %}

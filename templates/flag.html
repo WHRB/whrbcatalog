@@ -1,0 +1,45 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Make Comment
+{% endblock %}
+
+{% block head %}
+    <script>
+        $(document).ready(function(){
+            $(".alert").hide();
+            $("form").submit(function(event){
+                if ($.trim($(this).find('input[name="trackid"]').val()) == "" || $.trim($(this).find('input[name="problem"]').val()) == ""){
+                    event.preventDefault();
+                    $("#warning").slideDown();
+                } else {
+                    $("#warning").slideUp();
+                    $("#success").slideDown();
+                }
+            });
+        });
+    </script>
+{% endblock %}
+
+{% block main %}
+    <h1>Make Comment</h1>
+    <br>
+    <div id="success" class="alert alert-success">
+        <a href="#" class="close" data-dismiss="alert" aria-label="close" aria-hidden="true">&times;</a>
+        Comment added.
+    </div>
+    <div id="warning" class="alert alert-danger">
+        <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+        Must provide all fields.
+    </div>
+
+    <form action="/flag" name="flag" method="post">
+        <div class="form-group">
+            <input class="form-control" name="trackid" placeholder="Track ID" type="number" min="0" autofocus>
+        </div>
+        <div class="form-group">
+            <input class="form-control" name="problem" placeholder="Comments" type="text">
+        </div>
+        <button class="btn btn-primary" type="submit">Submit</button>
+    </form>
+{% endblock %}

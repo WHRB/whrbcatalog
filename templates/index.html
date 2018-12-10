@@ -1,0 +1,232 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Index
+{% endblock %}
+
+{% block main %}
+    <div>
+    <h1>Library</h1>
+    </div>
+    <br>
+    <div class="text-left">
+    <!--<button id="first" class="float-left linkbutton" >&laquo; First &nbsp;</button>-->
+    <button id="backward" class="float-left linkbutton" >&laquo; Previous</button>
+    <!--<button id="last" class="float-right linkbutton submit-button" >&nbsp; Last &raquo;</button>-->
+    <button id="forward" class="float-right linkbutton submit-button" >Next &raquo;</button>
+
+        <script type="text/javascript">
+
+            // Get the URL parameters page and search
+            var url = new URL(window.location.href);
+            var page = url.searchParams.get("page");
+            var search = url.searchParams.get("search");
+            // var rowcount = url.searchParams.get("rowcount");
+
+            // When the forward button is clicked change the page number
+            document.getElementById("forward").onclick = function () {
+
+                // If there is no search query
+                if (search == null)
+                {
+                    // If there is no page number assume it's one
+                    if (page == null)
+                    {
+                        page = 1;
+                    }
+
+                    // Add one to page number and redirect to the next page
+                    page++;
+                    location.href = "".concat("/index?page=", page.toString());
+                }
+
+                // If there is a search query
+                else
+                {
+                    // Add one to page number and redirect to the next page
+                    page++;
+                    location.href = "".concat("/index?search=", search, "&page=", page.toString());
+                }
+            };
+
+            // document.getElementById("last").onclick = function () {
+            //     if (search == null)
+            //     {
+            //         if (page == null)
+            //         {
+            //             page = 1;
+            //         }
+            //         page = (Math.ceil(rowcount/100));
+            //         location.href = "".concat("/index?page=", page.toString());
+            //     }
+            //     else
+            //     {
+            //         page = (Math.ceil(rowcount/100));
+            //         location.href = "".concat("/index?search=", search, "&page=", page.toString());
+            //     }
+            // };
+
+            // When the backwards button is clicked change the page number
+            document.getElementById("backward").onclick = function () {
+
+                // Only proceed if the page number is greater than 1
+                if (page > 1)
+                {
+                    // If there is not a search query
+                    if (search == null)
+                    {
+                        // Subract one from page number and redirect to the previous page
+                        page--;
+                        location.href = "".concat("/index?page=", page.toString());
+                    }
+
+                    // If there is a search query
+                    else
+                    {
+                        // Subract one from page number and redirect to the previous page
+                        page--;
+                        location.href = "".concat("/index?search=", search, "&page=", page.toString());
+                    }
+                }
+            };
+
+            // document.getElementById("first").onclick = function (){
+            //     if (page > 1)
+            //     {
+            //         if (search == null)
+            //         {
+            //             page = 1;
+            //             location.href = "".concat("/index?page=", page.toString());
+            //         }
+            //         else
+            //         {
+            //             page = 1;
+            //             location.href = "".concat("/index?search=", search, "&page=", page.toString());
+            //         }
+            //     }
+            // };
+
+        </script>
+    </div>
+    <br>
+    <table class="table table-condensed" style="border-collapse:collapse;">
+        <thead>
+            <tr>
+                <th scope="col">Period</th>
+                <th scope="col">Composer</th>
+                <th scope="col">Title</th>
+                <th scope="col">Artist</th>
+                <th scope="col">Label</th>
+                <th scope="col">Format</th>
+                <th scope="col">Number</th>
+                <th scope="col">Length</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in rows %}
+            <tr data-toggle="collapse" data-target="#rows_{{ loop.index - 1 }}" class="accordion-toggle">
+                <td>{{ row['period'] }}</td>
+                <td>{{ row['composer'] }}</td>
+                <td>{{ row['title'] }}</td>
+                <td>{{ row['artist'] }}</td>
+                <td>{{ row['label'] }}</td>
+                <td>{{ row['format'] }}</td>
+                <td>{{ row['number'] }}</td>
+                <td>{{ row['length'] }}</td>
+            </tr>
+                <td colspan=8 class="hiddenRow">
+                    <div class="accordion-body collapse" id="rows_{{ loop.index - 1}}">
+                        <p></p>
+                        <p>
+                            {% if row['flagged'] == true %}
+                                This track has been flagged.
+                            {% endif %}
+                        </p>
+                        <p>
+                            {% if row['notes'] != '' %}
+                                <strong>Note: </strong>{{ row['notes'] }}
+                            {% endif %}
+                        </p>
+                        <p>Skipping? Mislabeled? Missing? To flag this track, enter this track ID: {{ row['ID'] }}</p>
+                        <button class="btn btn-primary" type="button" data-toggle="modal" data-target="#flag-record" data-whatever="@mdo">Flag</button>
+                        <p></p>
+                    </div>
+                    <!-- https://getbootstrap.com/docs/4.0/components/modal/ -->
+                    <div class="modal fade" id="flag-record" tabindex="-1" role="dialog">
+                        <div class="modal-dialog modal-dialog-centered" role="document">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Uh oh, flag this track!</h5>
+                                    <button type="button" class="close" data-dismiss="modal">
+                                    <span>&times;</span>
+                                    </button>
+                                </div>
+                                <div class="modal-body">
+                                    <form action="/flag" name="flag" method="post">
+                                    <div class="form-group">
+                                        <input type="number" class="form-control" name="trackid" placeholder="Track ID" min="0">
+                                      </div>
+                                      <div class="form-group">
+                                        <textarea class="form-control" name="problem" placeholder="What's wrong?"></textarea>
+                                      </div>
+                                      <button type="submit" class="btn btn-primary">Submit</button>
+                                    </form>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <div>
+
+        <button id="backward1" class="float-left linkbutton" >&laquo; Previous</button>
+        <button id="forward1" class="float-right linkbutton submit-button" >Next &raquo;</button>
+        <script type="text/javascript">
+
+            // Identical to the buttons above!
+            var url = new URL(window.location.href);
+            var page = url.searchParams.get("page");
+            var search = url.searchParams.get("search");
+
+            document.getElementById("forward1").onclick = function () {
+                if (search == null)
+                {
+                    if (page == null)
+                    {
+                        page = 1;
+                    }
+                    page++;
+                    location.href = "".concat("/index?page=", page.toString());
+                }
+                else
+                {
+                    page++;
+                    location.href = "".concat("/index?search=", search, "&page=", page.toString());
+                }
+            };
+
+            document.getElementById("backward1").onclick = function () {
+                if (page > 1)
+                {
+                    if (search == null)
+                    {
+                        page--;
+                        location.href = "".concat("/index?page=", page.toString());
+                    }
+                    else
+                    {
+                        page--;
+                        location.href = "".concat("/index?search=", search, "&page=", page.toString());
+                    }
+                }
+            };
+
+        </script>
+    </div>
+{% endblock %}
