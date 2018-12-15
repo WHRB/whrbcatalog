@@ -1,7 +1,11 @@
+# Development
+
+To run the app locally just [install docker](https://docs.docker.com/install/) then run `docker-compose up -d`.
+
+# Usage
+
 Welcome to the Master Chekhov! This website is a searchable online database of all 40,000+ tracks in WHRB’s physical library down
 in Pennypacker basement. Here’s how you can use the site.
-
-First, you should be able to access the site by executing the `flask run` command in the terminal.
 
 Upon entering the site, you will be brought to the homepage, which is a simple search page. Let’s say you want to see all the tracks
 in WHRB’s library that were composed by Bach. Then, in the “Search by” dropdown menu, select “Composer” and type `Bach` in the search
