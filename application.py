@@ -1,15 +1,16 @@
-# Final Project: Chris Sun, Joyce Lu, Simon Eder
+# pylint: disable=C0103
+"""
+WHRB Chekhov
+CS50 Final Project: Chris Sun, Joyce Lu, Simon Eder
+"""
 
-import os
-import datetime
-import csv
-from cs50 import SQL
-from flask import Flask, flash, jsonify, redirect, render_template, request, session, url_for
-from flask_session import Session
 from tempfile import mkdtemp
+from cs50 import SQL
+from flask import Flask, jsonify, redirect, render_template, request, session, url_for
+from flask_session import Session
 from werkzeug.exceptions import default_exceptions, HTTPException, InternalServerError
 from werkzeug.security import check_password_hash, generate_password_hash
-from helpers import apology, login_required, lookup, usd
+from helpers import apology, login_required
 
 # Configure application
 app = Flask(__name__)
@@ -19,16 +20,13 @@ app.config["TEMPLATES_AUTO_RELOAD"] = True
 
 
 @app.after_request
-# Ensure responses aren't cached
 def after_request(response):
+    """Ensure responses aren't cached"""
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     response.headers["Expires"] = 0
     response.headers["Pragma"] = "no-cache"
     return response
 
-
-# Custom filter
-app.jinja_env.filters["usd"] = usd
 
 # Configure session to use filesystem (instead of signed cookies)
 app.config["SESSION_FILE_DIR"] = mkdtemp()
@@ -40,14 +38,16 @@ Session(app)
 # Configure CS50 test to use SQLite database
 db = SQL("sqlite:///chekhov.db")
 
+
 @app.route("/homepage")
 def homepage():
+    """Render homepage"""
     return render_template("homepage.html")
 
-@app.route("/",  methods=["GET", "POST"])
+
+@app.route("/", methods=["GET", "POST"])
 def search():
     """Show a search page"""
-
     if request.method == "POST":
 
         # Grab the type of search the user is requesting
@@ -57,31 +57,30 @@ def search():
         qlist = request.form.get("query").upper().split()
 
         # Create search parameters for the url
-        search = searchtype + "@" + "*".join(qlist)
+        search_params = searchtype + "@" + "*".join(qlist)
 
         # Redirect to index with search parameters
-        return redirect(url_for('index', search=search, page=1))
+        return redirect(url_for('index', search=search_params, page=1))
 
-    else:
-        return render_template("search.html")
+    return render_template("search.html")
 
 
 @app.route("/index")
 def index():
     """Show a table"""
-
     # Request the page argument from the url
     page = request.args.get('page', default=1, type=int)
-
 
     # Request the search argument from the url
     presearch = request.args.get('search', default=None, type=None)
 
     # If no search argument (eg: going directly to index from the link or url)
-    if presearch == None:
-
+    if presearch is None:
         # Pull 100 rows from the library, offset based on the page url parameter
-        rows = db.execute("SELECT * FROM library ORDER BY period, composer LIMIT 100 OFFSET :offset", offset=page*50 - 50)
+        rows = db.execute(
+            "SELECT * FROM library ORDER BY period, composer LIMIT 100 OFFSET :offset",
+            offset=page*50 - 50
+        )
 
         # NOTE: rowcount was too unwieldy in SQLite so we ended up commenting out these parts in the python and html!
         # rowcountlist = db.execute("SELECT count(*) FROM library")
@@ -89,89 +88,85 @@ def index():
         # rowcount = rowcountdict.get("count(*)")
 
         # Render index page
-        return render_template("index.html", rows = rows, rowcount=len(rows))
+        return render_template("index.html", rows=rows, rowcount=len(rows))
 
     # If search parameters exist (eg: going from the search form)
-    else:
+    # Separate the searchtype from the query
+    search_params = presearch.split("@")
 
-        # Seperate the searchtype from the query
-        search = presearch.split("@")
+    # Store the searchtype
+    searchtype = search_params[0]
 
-        # Store the searchtype
-        searchtype = search[0]
+    # Create a list of search keywords from the query
+    qlist = search_params[1].split("*")
 
-        # Create a list of search keywords from the query
-        qlist = search[1].split("*")
+    # Add % signs to both sides of each searchword so that SQL LIKE will search all instances
+    query = ["%" + item + "%" for item in qlist]
 
-        # Add % signs to both sides of each searchword so that SQL LIKE will search all instances
-        query = ["%" + item + "%" for item in qlist]
+    # If the user searchs by everything
+    if searchtype == "Everything":
+        # Add quotes around the first searchword
+        firstquery = "'" + query[0] + "'"
 
-        # If the user searchs by everything
-        if searchtype == "Everything":
+        # Create an empty list
+        sql = []
 
-            # Add quotes around the first searchword
-            firstquery = "'" + query[0] + "'"
+        # Create a SQL query systematically across a list
+        sql.append("SELECT * FROM library WHERE UPPER(period) LIKE " + firstquery)
+        sql.append(" OR UPPER(composer) LIKE " + firstquery)
+        sql.append(" OR UPPER(title) LIKE " + firstquery)
+        sql.append(" OR UPPER(artist) LIKE " + firstquery)
+        sql.append(" OR UPPER(label) LIKE " + firstquery)
+        sql.append(" OR UPPER(length) LIKE " + firstquery)
+        sql.append(" OR UPPER(format) LIKE " + firstquery)
 
-            # Create an empty list
-            sql = []
+        # If there is more than one searchword iterate across each one
+        for item in query[1:]:
 
-            # Create a SQL query systematically across a list
-            sql.append("SELECT * FROM library WHERE UPPER(period) LIKE " + firstquery)
-            sql.append(" OR UPPER(composer) LIKE " + firstquery)
-            sql.append(" OR UPPER(title) LIKE " + firstquery)
-            sql.append(" OR UPPER(artist) LIKE " + firstquery)
-            sql.append(" OR UPPER(label) LIKE " + firstquery)
-            sql.append(" OR UPPER(length) LIKE " + firstquery)
-            sql.append(" OR UPPER(format) LIKE " + firstquery)
+            # Put quotes around the searchword
+            quoteitem = "'" + item + "'"
 
-            # If there is more than one searchword iterate across each one
-            for item in query[1:]:
+            # Add onto the SQL Query
+            sql.append(" INTERSECT SELECT * FROM library WHERE UPPER(period) LIKE " + quoteitem)
+            sql.append(" OR UPPER(composer) LIKE " + quoteitem)
+            sql.append(" OR UPPER(title) LIKE " + quoteitem)
+            sql.append(" OR UPPER(artist) LIKE " + quoteitem)
+            sql.append(" OR UPPER(label) LIKE " + quoteitem)
+            sql.append(" OR UPPER(length) LIKE " + quoteitem)
+            sql.append(" OR UPPER(format) LIKE " + quoteitem)
 
-                # Put quotes around the searchword
-                quoteitem = "'" + item + "'"
+        # Order by period, then composer so that new entries to the database will still be ordered,
+        # offset based on page param
+        sql.append("ORDER BY period, composer LIMIT 100 OFFSET " + str(page * 50 - 50))
 
-                # Add onto the SQL Query
-                sql.append(" INTERSECT SELECT * FROM library WHERE UPPER(period) LIKE " + quoteitem)
-                sql.append(" OR UPPER(composer) LIKE " + quoteitem)
-                sql.append(" OR UPPER(title) LIKE " + quoteitem)
-                sql.append(" OR UPPER(artist) LIKE " + quoteitem)
-                sql.append(" OR UPPER(label) LIKE " + quoteitem)
-                sql.append(" OR UPPER(length) LIKE " + quoteitem)
-                sql.append(" OR UPPER(format) LIKE " + quoteitem)
+        # Join the list together and run it as a SQL query
+        rows = db.execute("".join(sql))
 
-            # Order by period, then composer so that new entries to the database will still be ordered, offset based on page param
-            sql.append("ORDER BY period, composer LIMIT 100 OFFSET " + str(page * 50 -50))
+        # Render index
+        return render_template("index.html", rows=rows)
 
-            # Join the list together and run it as a SQL query
-            rows = db.execute("".join(sql))
+    # If the user searches by a specific category
+    # Create an empty list
+    sql = []
 
-            # Render index
-            return render_template("index.html", rows=rows)
+    # Create a SQL search query
+    sql.append("SELECT * FROM library ")
+    sql.append("WHERE UPPER(" + searchtype.lower() + ") LIKE ")
+    sql.append("'" + query[0] + "'")
 
-        # If the user searches by a specific category
-        else:
+    # Iterate over additional keywords
+    for item in query[1:]:
+        sql.append(" OR UPPER(" + searchtype.lower() + ") LIKE ")
+        sql.append("'" + item + "'")
 
-            # Create an empty list
-            sql = []
+    # Order the search query
+    sql.append("ORDER BY period, composer LIMIT 100 OFFSET " + str(page * 50 - 50))
 
-            # Create a SQL search query
-            sql.append("SELECT * FROM library ")
-            sql.append("WHERE UPPER(" + searchtype.lower() + ") LIKE ")
-            sql.append("'" + query[0] + "'")
+    # Join the list together and run it as a SQL query
+    rows = db.execute("".join(sql))
 
-            # Iterate over additional keywords
-            for item in query[1:]:
-                sql.append(" OR UPPER(" + searchtype.lower() + ") LIKE ")
-                sql.append("'" + item + "'")
-
-            # Order the search query
-            sql.append("ORDER BY period, composer LIMIT 100 OFFSET " + str(page * 50 -50))
-
-            # Join the list together and run it as a SQL query
-            rows = db.execute("".join(sql))
-
-            # Render index
-            return render_template("index.html", rows=rows)
+    # Render index
+    return render_template("index.html", rows=rows)
 
 
 @app.route("/flag", methods=["GET", "POST"])
@@ -180,42 +175,42 @@ def flag():
 
     # If the user submits a flag request
     if request.method == "POST":
-
         # Grab the existing notes for the track
         oldnote = db.execute("SELECT notes FROM library WHERE id=:trackid",
-                              trackid=request.form.get("trackid"))
+                             trackid=request.form.get("trackid"))
 
         # If there are no existing notes update without a line break
         if oldnote[0]['notes'] == "":
             db.execute("UPDATE library SET notes = :newnote, flagged=1 WHERE id=:trackid",
-                   newnote=request.form.get("problem"), trackid=request.form.get("trackid"))
+                       newnote=request.form.get("problem"), trackid=request.form.get("trackid"))
             return redirect("/")
 
         # If there are existing notes update with a line break
-        else:
-            note = oldnote[0]['notes'] + ";\n" + request.form.get("problem")
+        note = oldnote[0]['notes'] + ";\n" + request.form.get("problem")
 
-            db.execute("UPDATE library SET notes = :newnote, flagged=:flagged WHERE id=:trackid",
-                        newnote=note, flagged=1, trackid=request.form.get("trackid"))
-            return redirect("/")
+        db.execute("UPDATE library SET notes = :newnote, flagged=:flagged WHERE id=:trackid",
+                   newnote=note, flagged=1, trackid=request.form.get("trackid"))
+        return redirect("/")
 
-    else:
-        return render_template("flag.html")
+    return render_template("flag.html")
+
 
 @app.route("/addrecord", methods=["GET", "POST"])
 @login_required
 def addrecord():
     """Add a record to the database"""
-
     if request.method == "POST":
-
         # Take the user's form input and insert it into the library database
-        db.execute("INSERT INTO library (period, composer, title, artist, label, format, number, length, notes) VALUES (:period, :composer, :title, :artist, :label, :format, :number, :length, :notes)",
-                    period=request.form.get("period"), composer=request.form.get("composer"), title=request.form.get("title"), artist=request.form.get("artist"), label=request.form.get("label"), format=request.form.get("format"), number=request.form.get("number"), length=request.form.get("length"), notes=request.form.get("notes"))
+        db.execute(("INSERT INTO library (period, composer, title, artist, label, format, number, length, notes)"
+                    " VALUES (:period, :composer, :title, :artist, :label, :format, :number, :length, :notes)"),
+                   period=request.form.get("period"), composer=request.form.get("composer"),
+                   title=request.form.get("title"), artist=request.form.get("artist"),
+                   label=request.form.get("label"), format=request.form.get("format"),
+                   number=request.form.get("number"), length=request.form.get("length"),
+                   notes=request.form.get("notes"))
         return render_template("addrecord.html")
 
-    else:
-        return render_template("addrecord.html")
+    return render_template("addrecord.html")
 
 
 @app.route("/check", methods=["GET"])
@@ -230,7 +225,7 @@ def check():
                       username=new_username)
 
     # If the new username is blank or already exists, return a JSON false
-    if len(new_username) == 0 or len(rows) != 0:
+    if not new_username or rows:
         return jsonify(False)
 
     # Otherwise return a JSON true
@@ -252,7 +247,7 @@ def login():
             return apology("must provide username", 400)
 
         # Ensure password was submitted
-        elif not request.form.get("password"):
+        if not request.form.get("password"):
             return apology("must provide password", 400)
 
         # Query database for username
@@ -270,8 +265,7 @@ def login():
         return redirect("/")
 
     # User reached route via GET (as by clicking a link or via redirect)
-    else:
-        return render_template("login.html")
+    return render_template("login.html")
 
 
 @app.route("/logout")
@@ -290,13 +284,12 @@ def register():
     """Register user"""
 
     if request.method == "POST":
-
         # Ensure username was submitted
         if not request.form.get("username"):
             return apology("must provide username", 400)
 
         # Ensure password was submitted
-        elif not request.form.get("password"):
+        if not request.form.get("password"):
             return apology("must provide password", 400)
 
         # Query database for username
@@ -304,7 +297,7 @@ def register():
                           username=request.form.get("username"))
 
         # If there is already a match for the username, return an apology
-        if len(rows) != 0:
+        if rows:
             return render_template("register.html")
 
         # If the password doesn't match the confimation password, return an apology
@@ -328,8 +321,7 @@ def register():
         return redirect("/")
 
     # User reached route via GET (as by clicking a link or via redirect)
-    else:
-        return render_template("register.html")
+    return render_template("register.html")
 
 
 def errorhandler(e):
