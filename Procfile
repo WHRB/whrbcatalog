@@ -1,1 +1,1 @@
-web: gunicorn application:app --log-file -
+web: gunicorn whrbcatalog.application:app --log-file -

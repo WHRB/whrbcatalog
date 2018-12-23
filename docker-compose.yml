@@ -8,4 +8,4 @@ services:
     environment:
       - FLASK_ENV=development
     volumes:
-      - ./whrbcatalog:/usr/src/app:cached
+      - .:/usr/src/app:cached
